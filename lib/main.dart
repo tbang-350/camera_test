@@ -1,7 +1,11 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:exif/exif.dart';
+import 'package:location/location.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 void main() {
   runApp(const MaterialApp(
@@ -19,6 +23,8 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   File? imageFile;
+  String dirPath = '';
+  var location = Location();
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +70,8 @@ class _HomeState extends State<Home> {
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => getImage(source: ImageSource.camera),
+                    onPressed: () =>
+                        {getImage(source: ImageSource.camera), getLocation()},
                     child: const Text('Capture Image',
                         style: TextStyle(fontSize: 18)),
                   ),
@@ -74,7 +81,8 @@ class _HomeState extends State<Home> {
                 ),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => getImage(source: ImageSource.gallery),
+                    onPressed: () =>
+                        {getImage(source: ImageSource.gallery), getLocation()},
                     child: const Text(
                       'Select Image',
                       style: TextStyle(fontSize: 18),
@@ -93,16 +101,68 @@ class _HomeState extends State<Home> {
     final file =
         await ImagePicker().pickImage(source: source, imageQuality: 100);
 
-    var lastDate = await imageFile?.lastAccessed();
-    // ignore: avoid_print
-    print(lastDate);
+    // Map<String, IfdTag> data =
+    //     await readExifFromBytes(await imageFile!.readAsBytes());
+
+    // if (data == null || data.isEmpty) {
+    //   print("-no exif data");
+    //   return;
+    // }
+
+    // for (String key in data.keys) {
+    //   print("-$key (${data[key]?.tagType}): ${data[key]}");
+    // }
+
+    // Uint8List imageData = await imageFile?.originBytes;
+
+    // Uint8List bytes;
+    // bytes = await imageFile!.readAsBytes();
+    // var tags = await readExifFromBytes(bytes, details: false);
+    // print(tags);
+    // tags.forEach((key, value) => print("$key : $value"));
 
     if (file?.path != null) {
-      // File tmpFile = File(file!.path);
-      // tmpFile = await tmpFile.copy(tmpFile.path);
       setState(() {
         imageFile = File(file!.path);
+        // dirPath = imageFile!.path;
+        // print('path');
+        // print(dirPath);
       });
     }
   }
+
+  void getLocation() async {
+    var serviceEnabled = await location.serviceEnabled();
+    if (serviceEnabled) {
+      serviceEnabled = await location.requestService();
+
+      if (!serviceEnabled) {
+        return;
+      }
+    }
+
+    var permissionGranted = await location.hasPermission();
+    if (permissionGranted == PermissionStatus.denied) {
+      permissionGranted = await location.requestPermission();
+      if (permissionGranted != PermissionStatus.granted) {
+        return;
+      }
+    }
+
+    var currentLocation = await location.getLocation();
+    print("-current location is $currentLocation ");
+  }
+
+  // void getPhotoData(List<AssetEntity> photos) async {
+  //   for (AssetEntity photo in photos) {
+  //     if (photo.type == AssetType.image) {
+  //       var date = photo.createDateTime;
+  //       var location = photo.latlngAsync();
+
+  //       Uint8List? imageData = await photo.originBytes;
+  //       Map<String, IfdTag> data =
+  //           await readExifFromBytes(imageData!, details: false);
+  //     }
+  //   }
+  // }
 }
